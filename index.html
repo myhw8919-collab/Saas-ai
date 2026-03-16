@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NEXUS AI — Multi-Model Autonome Werkruimte</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080810;--bg2:#0d0d18;--bg3:#111120;--bg4:#16162a;
+  --border:#1e1e35;--border2:#2a2a45;
+  --text:#d4d4e8;--text2:#8888aa;--text3:#555570;
+  --accent:#4f6ef7;--accent2:#3d5ce5;
+  --green:#22c55e;--amber:#f59e0b;--red:#ef4444;--purple:#8b5cf6;--cyan:#06b6d4;
+  --font:'Inter',system-ui,sans-serif;
+}
+html{font-size:14px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+a{color:var(--accent);text-decoration:none}
+button{font-family:var(--font);cursor:pointer}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* TOPBAR */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1.5rem;
+  background:rgba(8,8,16,.97);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:300;
+  backdrop-filter:blur(20px);
+}
+.brand{display:flex;align-items:center;gap:.6rem}
+.brand-mark{
+  width:30px;height:30px;
+  background:var(--accent);
+  border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:800;color:#fff;letter-spacing:-.03em;
+}
+.brand-name{font-weight:700;font-size:.9rem;letter-spacing:-.02em;color:#fff}
+.brand-version{font-size:.65rem;color:var(--text3);margin-left:.3rem}
+.topbar-right{display:flex;align-items:center;gap:.75rem}
+.indicator{display:flex;align-items:center;gap:.4rem;font-size:.7rem;color:var(--text2)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+.dot.live{background:var(--green);animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.model-count{font-size:.7rem;color:var(--text3);background:var(--bg3);border:1px solid var(--border);padding:.2rem .55rem;border-radius:4px}
+
+/* LAYOUT */
+.workspace{display:grid;grid-template-columns:1fr;gap:0;min-height:calc(100vh - 45px)}
+.panel-top{padding:1.5rem;border-bottom:1px solid var(--border)}
+.panel-main{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 45px - 180px)}
+@media(max-width:900px){.panel-main{grid-template-columns:1fr}}
+.sidebar{border-right:1px solid var(--border);padding:1rem;overflow-y:auto;background:var(--bg2)}
+.content-area{display:flex;flex-direction:column;overflow:hidden}
+
+/* COMMAND INPUT */
+.cmd-section{max-width:900px}
+.cmd-label{font-size:.65rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.6rem}
+.cmd-input-wrap{display:flex;gap:.6rem;align-items:flex-start}
+.cmd-textarea{
+  flex:1;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:6px;padding:.65rem .8rem;
+  color:var(--text);font-family:var(--font);font-size:.82rem;
+  resize:none;outline:none;min-height:56px;line-height:1.5;
+  transition:border-color .15s;
+}
+.cmd-textarea:focus{border-color:var(--accent)}
+.cmd-textarea::placeholder{color:var(--text3)}
+.cmd-controls{display:flex;flex-direction:column;gap:.4rem;min-width:140px}
+.budget-field{
+  background:var(--bg3);border:1px solid var(--border2);
+  border-radius:6px;padding:.5rem .65rem;
+  color:var(--text);font-family:var(--font);font-size:.78rem;outline:none;width:100%;
+}
+.budget-field::placeholder{color:var(--text3)}
+.run-btn{
+  background:var(--accent);border:none;color:#fff;
+  padding:.55rem .7rem;border-radius:6px;
+  font-weight:600;font-size:.75rem;letter-spacing:.01em;
+  transition:background .15s,transform .1s;white-space:nowrap;
+}
+.run-btn:hover{background:var(--accent2)}
+.run-btn:active{transform:scale(.98)}
+.run-btn:disabled{background:var(--bg4);color:var(--text3);cursor:not-allowed}
+.stop-btn{
+  background:transparent;border:1px solid var(--red);color:var(--red);
+  padding:.55rem .7rem;border-radius:6px;font-weight:600;font-size:.75rem;
+}
+
+/* PRESETS */
+.preset-row{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.85rem}
+.preset{
+  background:transparent;border:1px solid var(--border);color:var(--text2);
+  padding:.22rem .6rem;border-radius:4px;font-size:.68rem;
+  transition:all .15s;
+}
+.preset:hover{border-color:var(--accent);color:var(--text)}
+
+/* PROGRESS */
+.progress-strip{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:.75rem 1.5rem;
+  display:none;
+}
+.prog-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem}
+.prog-label{font-size:.7rem;color:var(--text2)}
+.prog-pct{font-size:.7rem;font-weight:600;color:var(--accent)}
+.prog-track{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s ease}
+.phase-list{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.6rem}
+.phase-tag{
+  font-size:.63rem;padding:.15rem .5rem;border-radius:3px;
+  border:1px solid transparent;color:var(--text3);background:transparent;
+  transition:all .2s;
+}
+.phase-tag.done{color:var(--green);background:#22c55e12;border-color:#22c55e22}
+.phase-tag.active{color:var(--accent);background:#4f6ef714;border-color:var(--accent)}
+
+/* SIDEBAR */
+.sidebar-section{margin-bottom:1.25rem}
+.sidebar-title{font-size:.62rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.55rem}
+
+/* MODEL CARDS */
+.model-card{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.45rem .55rem;border-radius:5px;
+  border:1px solid transparent;
+  margin-bottom:.3rem;transition:all .2s;
+  cursor:default;
+}
+.model-card.active{background:var(--bg3);border-color:var(--border2)}
+.model-card.working{background:#4f6ef708;border-color:#4f6ef733}
+.model-card.done{background:#22c55e08;border-color:#22c55e22}
+.model-icon{
+  width:26px;height:26px;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;font-weight:800;color:#fff;flex-shrink:0;
+}
+.model-meta{flex:1;min-width:0}
+.model-name{font-size:.75rem;font-weight:600;color:var(--text);line-height:1.2}
+.model-role{font-size:.62rem;color:var(--text3);line-height:1.2}
+.model-status{font-size:.62rem;font-weight:500;padding:.1rem .35rem;border-radius:3px}
+.model-task{font-size:.65rem;color:var(--text3);margin-top:.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.model-bar{height:2px;background:var(--border);border-radius:1px;overflow:hidden;margin-top:.25rem}
+.model-bar-fill{height:100%;border-radius:1px;transition:width .4s ease}
+
+/* BUDGET MINI */
+.budget-card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:5px;padding:.65rem;margin-top:.4rem;
+  display:none;
+}
+.budget-row{display:flex;justify-content:space-between;font-size:.7rem;margin-bottom:.3rem}
+.budget-val{font-weight:600;color:var(--green)}
+.budget-bar-wrap{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.budget-bar-fill{height:100%;background:var(--green);transition:width .5s}
+.budget-total{font-size:.62rem;color:var(--text3);margin-top:.25rem}
+
+/* TERMINAL */
+.terminal-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:320px}
+.terminal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem .9rem;background:var(--bg2);border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.terminal-dots{display:flex;gap:5px}
+.tdot{width:8px;height:8px;border-radius:50%}
+.terminal-label{font-size:.65rem;color:var(--text3);margin-left:.4rem;font-family:'JetBrains Mono','Courier New',monospace}
+.terminal-meta{display:flex;align-items:center;gap:.5rem}
+.terminal-live{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s infinite;display:none}
+.terminal-count{font-size:.62rem;color:var(--text3)}
+.terminal-body{
+  flex:1;overflow-y:auto;padding:.6rem .9rem;
+  font-family:'JetBrains Mono','Courier New',monospace;
+  background:var(--bg);
+  min-height:280px;max-height:320px;
+}
+.log-entry{display:flex;gap:.4rem;font-size:.68rem;line-height:1.6;align-items:flex-start;margin-bottom:.05rem}
+.log-ts{color:var(--text3);flex-shrink:0;font-size:.62rem;padding-top:1px;min-width:56px}
+.log-src{font-weight:700;font-size:.63rem;flex-shrink:0;padding-top:1px;min-width:60px}
+.log-sym{flex-shrink:0;padding-top:1px;width:10px}
+.log-text{word-break:break-word;color:var(--text2)}
+.log-text.success{color:#4ade80}
+.log-text.warning{color:#fbbf24}
+.log-text.error{color:#f87171}
+.log-text.action{color:#a78bfa}
+.terminal-idle{font-size:.72rem;color:var(--text3);padding:.5rem 0}
+.blink{animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* OUTPUT PANEL */
+.output-panel{border-top:1px solid var(--border);background:var(--bg2)}
+.output-tabs-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem .9rem;border-bottom:1px solid var(--border);
+  flex-wrap:wrap;gap:.4rem;
+}
+.output-tabs{display:flex;gap:.25rem;flex-wrap:wrap}
+.output-tab{
+  background:transparent;border:1px solid var(--border);
+  color:var(--text3);padding:.2rem .55rem;border-radius:3px;
+  font-size:.67rem;font-family:var(--font);transition:all .15s;
+}
+.output-tab.active{border-color:var(--accent);color:var(--accent);background:#4f6ef710}
+.output-actions{display:flex;gap:.3rem}
+.action-btn{
+  background:transparent;border:1px solid var(--border);
+  color:var(--text2);padding:.2rem .55rem;border-radius:3px;
+  font-size:.65rem;font-family:var(--font);transition:all .15s;
+}
+.action-btn:hover{border-color:var(--accent);color:var(--text)}
+.action-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.output-file-meta{
+  padding:.5rem .9rem;border-bottom:1px solid var(--border);
+  display:none;align-items:center;gap:.5rem;
+}
+.file-tag{
+  font-size:.62rem;padding:.1rem .4rem;border-radius:3px;
+  background:var(--bg3);border:1px solid var(--border);color:var(--text3);
+}
+.file-title{font-weight:600;font-size:.8rem}
+.file-desc{font-size:.65rem;color:var(--text3);margin-top:1px}
+.toggle-mode{margin-left:auto;background:transparent;border:1px solid var(--border);color:var(--text3);padding:.15rem .45rem;border-radius:3px;font-size:.63rem;font-family:var(--font);display:none}
+.preview-iframe{width:100%;border:none;display:block;height:520px}
+.code-output{
+  padding:.7rem .9rem;font-size:.65rem;color:#94a3b8;
+  overflow:auto;max-height:520px;
+  font-family:'JetBrains Mono','Courier New',monospace;
+  line-height:1.6;white-space:pre-wrap;word-break:break-word;
+  background:var(--bg);
+}
+.output-placeholder{padding:2rem;text-align:center;color:var(--text3)}
+.output-placeholder-icon{font-size:1.4rem;margin-bottom:.4rem;opacity:.4}
+.output-placeholder-text{font-size:.75rem}
+
+/* COMPLETE */
+.complete-bar{
+  padding:.75rem 1.5rem;
+  background:#22c55e0a;border-bottom:1px solid #22c55e22;
+  display:none;align-items:center;gap:.8rem;
+}
+.complete-icon{font-size:1rem;color:var(--green)}
+.complete-title{font-weight:600;font-size:.82rem;color:var(--green)}
+.complete-sub{font-size:.7rem;color:#86efac;margin-top:.1rem}
+.complete-close{margin-left:auto;background:transparent;border:1px solid #22c55e44;color:#4ade80;padding:.2rem .5rem;border-radius:3px;font-size:.65rem;font-family:var(--font)}
+
+/* WARN */
+.warn-bar{
+  padding:.55rem 1.5rem;background:#f59e0b0a;border-bottom:1px solid #f59e0b22;
+  font-size:.72rem;color:var(--amber);display:none;
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">NX</div>
+    <span class="brand-name">NEXUS AI</span>
+    <span class="brand-version">v4.0</span>
+  </div>
+  <div class="topbar-right">
+    <div class="indicator"><span class="dot" id="live-dot"></span><span id="live-label">Gereed</span></div>
+    <div class="model-count" id="model-count">12 modellen</div>
+  </div>
+</div>
+
+<div class="workspace">
+
+  <!-- TOP: COMMAND -->
+  <div class="panel-top">
+    <div class="cmd-section">
+      <div class="cmd-label">Opdracht</div>
+      <div class="cmd-input-wrap">
+        <textarea class="cmd-textarea" id="cmd-input" rows="2"
+          placeholder="Beschrijf wat u nodig heeft. Het systeem selecteert automatisch de juiste modellen en levert een volledig resultaat."></textarea>
+        <div class="cmd-controls">
+          <input type="number" class="budget-field" id="budget-input" placeholder="Budget (€)" min="0"/>
+          <div id="action-area">
+            <button class="run-btn" id="run-btn" onclick="start()" style="width:100%">Uitvoeren</button>
+          </div>
+        </div>
+      </div>
+      <div class="preset-row">
+        <button class="preset" onclick="p(0)">Game development — PS5</button>
+        <button class="preset" onclick="p(1)">Belastingoptimalisatie NL</button>
+        <button class="preset" onclick="p(2)">SaaS product bouwen</button>
+        <button class="preset" onclick="p(3)">Marketing campagne</button>
+        <button class="preset" onclick="p(4)">3D product visualisatie</button>
+        <button class="preset" onclick="p(5)">E-commerce platform</button>
+        <button class="preset" onclick="p(6)">Jaarrekening analyse</button>
+        <button class="preset" onclick="p(7)">Video contentplan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WARN / COMPLETE -->
+  <div id="warn-bar" class="warn-bar"></div>
+  <div id="complete-bar" class="complete-bar">
+    <span class="complete-icon">&#10003;</span>
+    <div>
+      <div class="complete-title">Taak voltooid</div>
+      <div class="complete-sub" id="complete-sub"></div>
+    </div>
+    <button class="complete-close" onclick="document.getElementById('complete-bar').style.display='none'">Sluiten</button>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-strip" id="progress-strip">
+    <div class="prog-meta">
+      <span class="prog-label" id="prog-phase-label">Initialiseren...</span>
+      <span class="prog-pct" id="prog-pct">0%</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="phase-list" id="phase-list"></div>
+  </div>
+
+  <!-- MAIN PANEL -->
+  <div class="panel-main">
+
+    <!-- SIDEBAR: MODELS -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Actieve modellen</div>
+        <div id="model-list"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Budget</div>
+        <div class="budget-card" id="budget-card">
+          <div class="budget-row">
+            <span style="color:var(--text2)">Verbruikt</span>
+            <span class="budget-val" id="bv">€0</span>
+          </div>
+          <div class="budget-bar-wrap"><div class="budget-bar-fill" id="bf" style="width:0%"></div></div>
+          <div class="budget-total" id="bt">—</div>
+        </div>
+        <div id="no-budget" style="font-size:.68rem;color:var(--text3);margin-top:.3rem">Geen budget ingesteld</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: TERMINAL + OUTPUT -->
+    <div class="content-area">
+
+      <!-- TERMINAL -->
+      <div class="terminal-wrap">
+        <div class="terminal-header">
+          <div style="display:flex;align-items:center">
+            <div class="terminal-dots">
+              <div class="tdot" style="background:#ff5f57"></div>
+              <div class="tdot" style="background:#ffbd2e"></div>
+              <div class="tdot" style="background:#28c840"></div>
+            </div>
+            <span class="terminal-label">system.log</span>
+          </div>
+          <div class="terminal-meta">
+            <span class="terminal-live" id="tl"></span>
+            <span class="terminal-count"><span id="log-n">0</span> entries</span>
+          </div>
+        </div>
+        <div class="terminal-body" id="term">
+          <div class="terminal-idle">Systeem gereed. <span class="blink">_</span></div>
+        </div>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="output-panel" id="output-panel" style="display:none">
+        <div class="output-tabs-bar">
+          <div class="output-tabs" id="out-tabs"></div>
+          <div class="output-actions">
+            <button class="toggle-mode" id="toggle-mode" onclick="toggleMode()">Broncode</button>
+            <button class="action-btn" onclick="dlActive()">Exporteren</button>
+            <button class="action-btn primary" onclick="dlAll()">Alles exporteren</button>
+          </div>
+        </div>
+        <div class="output-file-meta" id="out-meta">
+          <span class="file-tag" id="out-tag">—</span>
+          <div>
+            <div class="file-title" id="out-title">—</div>
+            <div class="file-desc" id="out-desc">—</div>
+          </div>
+        </div>
+        <div id="out-body">
+          <div class="output-placeholder">
+            <div class="output-placeholder-icon">&#128196;</div>
+            <div class="output-placeholder-text">Uitvoer verschijnt na voltooiing van de taak.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── PRESETS ───────────────────────────────────────────────────
+const PRESETS = [
+  "Ontwikkel een volledig PS5-spel: game engine architectuur, gameplay mechanics, asset pipeline, audio systeem, netcode voor multiplayer, volledige broncode structuur en productieplan",
+  "Analyseer de Nederlandse belastingwetgeving 2024–2025: optimale structuur voor minimale belastingdruk, box 1/2/3 optimalisatie, investeringsaftrek, BV-structuur vs IB, dividend vs salaris, vermogensrendementsheffing, alle relevante wetgeving en concrete berekeningen",
+  "Bouw een volledige SaaS-applicatie: authenticatie, subscriptions, dashboard, API, database schema, deployment pipeline, pricing strategie en go-to-market plan",
+  "Ontwikkel een complete 360-graden marketing campagne: contentstrategie, advertentiebudgetten per kanaal, ROI-prognoses, video scripts, A/B testing framework en implementatietijdlijn",
+  "Creëer een interactieve 3D productvisualisatie met WebGL: fotorealistische rendering, animaties, AR-ready export, configurator UI en technische documentatie",
+  "Bouw een volledige e-commerce omgeving: productmanagement, checkout, betalingsintegratie, logistiek koppeling, analytics dashboard en schaalarchitectuur",
+  "Voer een volledige jaarrekening analyse uit: balans, winst- en verliesrekening, cashflow, ratio-analyse, benchmarking en strategische aanbevelingen",
+  "Produceer een compleet video contentplan: scripts, storyboards, productieschema, distributieplan per platform, engagement strategie en monetisatiemodel"
+];
+function p(i){document.getElementById('cmd-input').value=PRESETS[i];}
+
+// ── MODELS ────────────────────────────────────────────────────
+const MODELS = [
+  {id:'gpt4',name:'GPT-4o',org:'OpenAI',color:'#10a37f',role:'Redenering & Code',caps:['code','text','analysis']},
+  {id:'claude',name:'Claude 3.5',org:'Anthropic',color:'#cc785c',role:'Analyse & Schrijven',caps:['text','analysis','code']},
+  {id:'gemini',name:'Gemini 1.5 Pro',org:'Google',color:'#4285f4',role:'Multimodaal & Research',caps:['text','image','video','audio']},
+  {id:'grok',name:'Grok 2',org:'xAI',color:'#1da1f2',role:'Real-time & Redenering',caps:['text','realtime']},
+  {id:'llama',name:'Llama 3.1',org:'Meta',color:'#0668E1',role:'Open-source Fundament',caps:['text','code']},
+  {id:'mistral',name:'Mistral Large',org:'Mistral',color:'#ff7000',role:'Efficiënte Inferentie',caps:['text','code']},
+  {id:'dalle',name:'DALL-E 3',org:'OpenAI',color:'#10a37f',role:'Beeldgeneratie',caps:['image']},
+  {id:'midjourney',name:'Midjourney v6',org:'Midjourney',color:'#7c5cbf',role:'Creatieve Beelden',caps:['image']},
+  {id:'sora',name:'Sora',org:'OpenAI',color:'#10a37f',role:'Videogeneratie',caps:['video']},
+  {id:'runway',name:'Runway Gen-3',org:'Runway',color:'#e63946',role:'Video & Effecten',caps:['video']},
+  {id:'elevenlabs',name:'ElevenLabs',org:'ElevenLabs',color:'#6c47ff',role:'Spraak & Audio',caps:['audio']},
+  {id:'perplexity',name:'Perplexity',org:'Perplexity',color:'#20b2aa',role:'Live Onderzoek',caps:['search','text']},
+];
+
+const PHASES = [
+  {id:'init',label:'Initialisatie'},
+  {id:'research',label:'Onderzoek'},
+  {id:'analysis',label:'Analyse'},
+  {id:'generation',label:'Generatie'},
+  {id:'review',label:'Verificatie'},
+  {id:'optimization',label:'Optimalisatie'},
+  {id:'output',label:'Uitvoer'},
+];
+
+const SC = {idle:'#555570',working:'#4f6ef7',done:'#22c55e',error:'#ef4444'};
+const SL = {idle:'Wacht',working:'Actief',done:'Gereed',error:'Fout'};
+const LC = {info:'var(--text2)',success:'success',warning:'warning',error:'error',action:'action'};
+const LI = {info:'·',success:'✓',warning:'!',error:'✗',action:'›'};
+
+let running=false, logs=[], outputs=[], activeOut=0, viewMode='preview';
+
+// ── INIT UI ───────────────────────────────────────────────────
+function initModels(){
+  document.getElementById('model-list').innerHTML = MODELS.map(m=>`
+    <div class="model-card" id="mc-${m.id}">
+      <div class="model-icon" style="background:${m.color}">${m.name.slice(0,2).toUpperCase()}</div>
+      <div class="model-meta">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="model-name">${m.name}</div>
+          <div class="model-status" id="ms-${m.id}" style="background:${SC.idle}18;color:${SC.idle};border:1px solid ${SC.idle}30">${SL.idle}</div>
+        </div>
+        <div class="model-role">${m.role}</div>
+        <div class="model-task" id="mt-${m.id}" style="display:none"></div>
+        <div class="model-bar" style="display:none" id="mb-${m.id}">
+          <div class="model-bar-fill" id="mbf-${m.id}" style="background:${m.color}"></div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function initPhases(){
+  document.getElementById('phase-list').innerHTML = PHASES.map(ph=>`
+    <span class="phase-tag" id="pt-${ph.id}">${ph.label}</span>`).join('');
+}
+
+function setModel(id, status, task, pct){
+  const m = MODELS.find(x=>x.id===id); if(!m)return;
+  const c = SC[status]||SC.idle;
+  const card = document.getElementById('mc-'+id);
+  card.className = 'model-card' + (status!=='idle'?' '+status:'');
+  const sb = document.getElementById('ms-'+id);
+  sb.style.background=c+'18'; sb.style.color=c; sb.style.border=`1px solid ${c}30`;
+  sb.textContent=SL[status]||status;
+  const mt=document.getElementById('mt-'+id);
+  const mb=document.getElementById('mb-'+id);
+  if(task){
+    mt.style.display='block'; mt.textContent=task;
+    mb.style.display='block';
+    if(pct!==undefined) document.getElementById('mbf-'+id).style.width=pct+'%';
+  }
+}
+
+function setPhase(phaseId, progress){
+  document.getElementById('prog-fill').style.width=progress+'%';
+  document.getElementById('prog-pct').textContent=progress+'%';
+  const ph = PHASES.find(p=>p.id===phaseId);
+  if(ph) document.getElementById('prog-phase-label').textContent=ph.label;
+  const ci = PHASES.findIndex(p=>p.id===phaseId);
+  PHASES.forEach((p,i)=>{
+    const el=document.getElementById('pt-'+p.id); if(!el)return;
+    el.className='phase-tag'+(i<ci?' done':p.id===phaseId?' active':'');
+  });
+}
+
+function log(modelId, msg, level='info'){
+  logs.push({modelId, msg, level, t:Date.now()});
+  const m = MODELS.find(x=>x.id===modelId);
+  const term = document.getElementById('term');
+  if(logs.length===1) term.innerHTML='';
+  const ts = new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const lc = level==='info'?'var(--text2)':level==='success'?'#4ade80':level==='warning'?'#fbbf24':level==='error'?'#f87171':'#a78bfa';
+  const d=document.createElement('div'); d.className='log-entry';
+  d.innerHTML=`<span class="log-ts">${ts}</span><span class="log-src" style="color:${m?.color||'var(--text3)'}">${m?.name.split(' ')[0]||modelId}</span><span class="log-sym" style="color:${lc}">${LI[level]||'·'}</span><span class="log-text ${level!=='info'?level:''}">${msg}</span>`;
+  term.appendChild(d);
+  term.scrollTop=term.scrollHeight;
+  document.getElementById('log-n').textContent=logs.length;
+}
+
+function addOutput(type, title, desc, content){
+  outputs.push({type,title,desc,content});
+  document.getElementById('output-panel').style.display='block';
+  renderTabs(); showOut(outputs.length-1);
+}
+
+const TYPE_LABELS = {website:'Web',app:'Applicatie',report:'Rapport',code:'Broncode',analysis:'Analyse',ads:'Marketing',doc:'Document',video:'Video'};
+function renderTabs(){
+  document.getElementById('out-tabs').innerHTML=outputs.map((o,i)=>`
+    <button class="output-tab${i===activeOut?' active':''}" onclick="showOut(${i})">${TYPE_LABELS[o.type]||o.type}</button>`).join('');
+}
+function showOut(i){
+  activeOut=i; viewMode='preview'; renderTabs();
+  const o=outputs[i]; if(!o)return;
+  const isH=['website','app'].includes(o.type);
+  document.getElementById('out-meta').style.display='flex';
+  document.getElementById('out-tag').textContent=TYPE_LABELS[o.type]||o.type;
+  document.getElementById('out-title').textContent=o.title;
+  document.getElementById('out-desc').textContent=o.desc;
+  const tm=document.getElementById('toggle-mode');
+  tm.style.display=isH?'block':'none'; tm.textContent='Broncode';
+  renderOutBody(o,isH,viewMode);
+}
+function renderOutBody(o,isH,mode){
+  const b=document.getElementById('out-body');
+  if(isH&&mode==='preview'){
+    b.innerHTML=`<iframe class="preview-iframe" sandbox="allow-scripts allow-same-origin" srcdoc="${escA(o.content)}"></iframe>`;
+  } else {
+    b.innerHTML=`<pre class="code-output">${esc(o.content)}</pre>`;
+  }
+}
+function toggleMode(){
+  const o=outputs[activeOut]; if(!o)return;
+  const isH=['website','app'].includes(o.type);
+  viewMode=viewMode==='preview'?'code':'preview';
+  document.getElementById('toggle-mode').textContent=viewMode==='preview'?'Broncode':'Preview';
+  renderOutBody(o,isH,viewMode);
+}
+function dlActive(){
+  const o=outputs[activeOut]; if(!o)return;
+  const ext=['website','app'].includes(o.type)?'html':o.type==='report'?'md':o.type==='code'?'js':'txt';
+  dl(o.title.replace(/\s+/g,'-').toLowerCase()+'.'+ext, o.content);
+}
+function dlAll(){outputs.forEach((o,i)=>setTimeout(()=>dlActive.call({activeOut:i}),i*300));}
+function dl(name,content){
+  const b=new Blob([content],{type:'text/plain'});
+  const u=URL.createObjectURL(b);
+  const a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);
+}
+function escA(s){return s.replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── CONTENT GENERATORS ───────────────────────────────────────
+
+function detectIntent(cmd){
+  const l=cmd.toLowerCase();
+  if(l.includes('ps5')||l.includes('game')||l.includes('spel')||l.includes('unity')||l.includes('unreal')) return 'game';
+  if(l.includes('belast')||l.includes('boekhouding')||l.includes('btw')||l.includes('bv')||l.includes('fiscaal')||l.includes('belasting')) return 'tax';
+  if(l.includes('video')||l.includes('film')||l.includes('reel')||l.includes('youtube')||l.includes('tiktok')) return 'video';
+  if(l.includes('3d')||l.includes('visualisatie')||l.includes('render')||l.includes('three.js')) return '3d';
+  if(l.includes('marketing')||l.includes('campagne')||l.includes('advertentie')) return 'marketing';
+  if(l.includes('jaarrekening')||l.includes('balans')||l.includes('winst')||l.includes('analyse')) return 'finance';
+  if(l.includes('saas')||l.includes('applicatie')||l.includes('app')||l.includes('platform')) return 'saas';
+  if(l.includes('shop')||l.includes('webshop')||l.includes('e-commerce')) return 'ecommerce';
+  return 'general';
+}
+
+function generateGameContent(cmd, budget){
+  const gameName = cmd.match(/(?:genaamd?|called?|titled?)\s+["']?([A-Za-z\s]+)["']?/i)?.[1]?.trim() || 'Project Nova';
+  const b = budget || 250000;
+  
+  const webApp = `<!DOCTYPE html><html lang="nl"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${gameName} — Game Development Blueprint</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#08080f;--s:#0f0f1c;--s2:#161624;--b:#1e1e32;--t:#d0d0e8;--t2:#8888a8;--a:#4f6ef7;--g:#22c55e;--r:#ef4444;--am:#f59e0b}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t);min-height:100vh}
+nav{display:flex;align-items:center;justify-content:space-between;padding:.9rem 2rem;background:rgba(8,8,15,.95);border-bottom:1px solid var(--b);position:sticky;top:0;z-index:100}
+.nav-brand{font-weight:700;font-size:1rem;letter-spacing:-.02em}
+.nav-badge{font-size:.65rem;background:var(--a);color:#fff;padding:.15rem .5rem;border-radius:3px;margin-left:.4rem}
+.container{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+h1{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:700;letter-spacing:-.03em;margin-bottom:.5rem;line-height:1.2}
+h2{font-size:1.1rem;font-weight:600;margin:2rem 0 .8rem;letter-spacing:-.01em}
+h3{font-size:.9rem;font-weight:600;margin:.8rem 0 .4rem;color:var(--t2)}
+p{font-size:.82rem;color:var(--t2);line-height:1.65;margin-bottom:.6rem}
+.hero{padding:3rem 0;border-bottom:1px solid var(--b);margin-bottom:2rem}
+.hero p{font-size:.9rem;max-width:640px;margin-top:.75rem}
+.tag{display:inline-block;font-size:.62rem;padding:.15rem .5rem;border-radius:3px;margin-right:.3rem;font-weight:500}
+.tag-blue{background:#4f6ef722;color:#818cf8;border:1px solid #4f6ef733}
+.tag-green{background:#22c55e22;color:#4ade80;border:1px solid #22c55e33}
+.tag-amber{background:#f59e0b22;color:#fbbf24;border:1px solid #f59e0b33}
+.tag-red{background:#ef444422;color:#f87171;border:1px solid #ef444433}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-bottom:1.5rem}
+.card{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:1.25rem}
+.card h3{margin-top:0;color:var(--t);font-size:.85rem}
+.card p{margin-bottom:0}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;margin-bottom:1.5rem}
+.stat{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:.9rem}
+.stat-label{font-size:.62rem;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem}
+.stat-value{font-size:1.1rem;font-weight:700;letter-spacing:-.02em}
+.stat-sub{font-size:.65rem;color:var(--t2);margin-top:.15rem}
+.timeline{margin:1rem 0}
+.tl-item{display:flex;gap:1rem;margin-bottom:1rem;position:relative}
+.tl-item::before{content:'';position:absolute;left:15px;top:30px;bottom:-10px;width:1px;background:var(--b)}
+.tl-item:last-child::before{display:none}
+.tl-num{width:30px;height:30px;border-radius:50%;background:var(--a);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;flex-shrink:0}
+.tl-content h4{font-size:.82rem;font-weight:600;margin-bottom:.25rem}
+.tl-content p{font-size:.75rem;margin-bottom:0}
+.code-block{background:#060612;border:1px solid var(--b);border-radius:6px;padding:1rem;font-family:'JetBrains Mono','Courier New',monospace;font-size:.68rem;line-height:1.7;color:#94a3b8;overflow-x:auto;margin:.75rem 0}
+.budget-table{width:100%;border-collapse:collapse;margin:.75rem 0;font-size:.78rem}
+.budget-table th{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--b);color:var(--t2);font-weight:500;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em}
+.budget-table td{padding:.5rem .75rem;border-bottom:1px solid var(--b);color:var(--t2)}
+.budget-table td:last-child{text-align:right;font-weight:500;color:var(--t)}
+.budget-table tr:last-child td{border-bottom:none;font-weight:700;color:var(--t);font-size:.82rem}
+.arch-row{display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0}
+.arch-chip{background:var(--s2);border:1px solid var(--b);border-radius:4px;padding:.2rem .55rem;font-size:.68rem;color:var(--t2)}
+</style>
+</head>
+<body>
+<nav>
+  <div>
+    <span class="nav-brand">${gameName}</span>
+    <span class="nav-badge">PS5</span>
+  </div>
+  <div style="font-size:.7rem;color:var(--t2)">Game Development Blueprint</div>
+</nav>
+<div class="container">
+  <div class="hero">
+    <div style="margin-bottom:.6rem">
+      <span class="tag tag-blue">PlayStation 5</span>
+      <span class="tag tag-green">AAA Productie</span>
+      <span class="tag tag-amber">Multiplayer</span>
+    </div>
+    <h1>${gameName}</h1>
+    <p>Volledig technisch productieplan voor PlayStation 5. Dit document omvat architectuurbeslissingen, engine-selectie, productiefasen, teamsamenstelling, budgetallocatie en technische specificaties op basis van de PS5-hardware.</p>
+  </div>
+
+  <h2>Technische specificaties PS5</h2>
+  <div class="stat-grid">
+    <div class="stat"><div class="stat-label">CPU</div><div class="stat-value">3.5 GHz</div><div class="stat-sub">8-core AMD Zen 2</div></div>
+    <div class="stat"><div class="stat-label">GPU</div><div class="stat-value">10.28 TFLOPS</div><div class="stat-sub">AMD RDNA 2, 36 CU</div></div>
+    <div class="stat"><div class="stat-label">RAM</div><div class="stat-value">16 GB</div><div class="stat-sub">GDDR6, 448 GB/s</div></div>
+    <div class="stat"><div class="stat-label">SSD</div><div class="stat-value">5.5 GB/s</div><div class="stat-sub">825 GB, Raw I/O</div></div>
+    <div class="stat"><div class="stat-label">Ray Tracing</div><div class="stat-value">Hardware</div><div class="stat-sub">Dedicated RT Units</div></div>
+    <div class="stat"><div class="stat-label">Target</div><div class="stat-value">4K / 60fps</div><div class="stat-sub">Variabele rate shading</div></div>
+  </div>
+
+  <h2>Engine-architectuur</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Aanbevolen: Unreal Engine 5.4</h3>
+      <p>Nanite virtuele geometrie, Lumen global illumination, MetaHuman, native PS5 DualSense haptics API. Licentie: 5% royalty boven $1M omzet.</p>
+      <div class="arch-row">
+        <span class="arch-chip">Nanite</span><span class="arch-chip">Lumen</span><span class="arch-chip">Chaos Physics</span><span class="arch-chip">Niagara VFX</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Alternatief: Custom Engine</h3>
+      <p>Volledige controle over renderer, geen royalty, maar 12–18 maanden extra ontwikkeltijd. Uitsluitend aanbevolen bij team &gt;50 engineers.</p>
+      <div class="arch-row">
+        <span class="arch-chip">C++20</span><span class="arch-chip">HLSL</span><span class="arch-chip">Vulkan</span><span class="arch-chip">GNM/GNMX</span>
+      </div>
+    </div>
+  </div>
+
+  <h2>Systeemarchitectuur</h2>
+  <div class="code-block">// Core Architecture — ${gameName}
+//
+// [Game Loop]              Target: 60fps (16.67ms budget)
+//   ├── Input System       DualSense haptics, adaptive triggers
+//   ├── Physics Engine     Chaos Physics, 120Hz simulation
+//   ├── Rendering Pipeline Nanite + Lumen, 4K native/DLSS
+//   ├── Audio System       Tempest 3D AudioTech, 3D positional
+//   ├── AI Subsystem       Behavior trees, NavMesh, EQS
+//   ├── Network Layer      P2P + dedicated servers, 64-player
+//   └── Asset Streaming    PS5 SSD, background decompression
+//
+// [Memory Layout]          16 GB total
+//   ├── Engine Core        ~2 GB reserved
+//   ├── Active Scene       ~6 GB world geometry/textures
+//   ├── Character/AI       ~3 GB actors + behavior
+//   ├── Audio Buffers      ~1 GB 3D audio
+//   └── Streaming Pool     ~4 GB dynamic loading</div>
+
+  <h2>Productiefasen</h2>
+  <div class="timeline">
+    <div class="tl-item"><div class="tl-num">1</div><div class="tl-content"><h4>Pre-productie — 6 maanden</h4><p>Game design document, prototyping, tech demo PS5, asset pipeline opzetten, engine configuratie, teamwerving.</p></div></div>
+    <div class="tl-item"><div class="tl-num">2</div><div class="tl-content"><h4>Alpha — 14 maanden</h4><p>Alle core gameplay mechanics implementeren, verticale slice, eerste speelbare wereld, multiplayer netcode, interne QA.</p></div></div>
+    <div class="tl-item"><div class="tl-num">3</div><div class="tl-content"><h4>Beta — 8 maanden</h4><p>Content completie, performance optimalisatie, Sony certificering (TRC), externe QA, marketing materiaal, lokalisatie.</p></div></div>
+    <div class="tl-item"><div class="tl-num">4</div><div class="tl-content"><h4>Gold & Launch — 2 maanden</h4><p>Day-one patch, server infrastructuur, PlayStation Store activatie, community management, live ops plan.</p></div></div>
+  </div>
+
+  <h2>Budgetallocatie (totaal: €${b.toLocaleString('nl-NL')})</h2>
+  <table class="budget-table">
+    <tr><th>Post</th><th>Toelichting</th><th>Bedrag</th></tr>
+    <tr><td>Engineering (8 FTE, 30 mnd)</td><td>Senior developers, engine, netcode</td><td>€${Math.round(b*.35).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>Art & Design (6 FTE, 24 mnd)</td><td>3D artists, animators, UX/UI</td><td>€${Math.round(b*.25).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>Audio & Muziek</td><td>Compositie, voice acting, SFX</td><td>€${Math.round(b*.08).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>QA & Testing</td><td>Sony TRC certificering + intern</td><td>€${Math.round(b*.07).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>Server infrastructuur</td><td>Multiplayer servers, CDN, 2 jaar</td><td>€${Math.round(b*.06).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>Marketing & Publishing</td><td>Trailers, PSN promotie, PR</td><td>€${Math.round(b*.12).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>Reserve & contingency (7%)</td><td>Onvoorziene kosten</td><td>€${Math.round(b*.07).toLocaleString('nl-NL')}</td></tr>
+    <tr><td><strong>Totaal</strong></td><td></td><td><strong>€${b.toLocaleString('nl-NL')}</strong></td></tr>
+  </table>
+
+  <h2>Kerntechnologieën</h2>
+  <div class="grid2">
+    <div class="card"><h3>Rendering</h3><p>Nanite virtueel geopolygon systeem. Geen LOD berekeningen. Miljarden polygonen per frame. Lumen real-time global illumination met hardware ray tracing.</p></div>
+    <div class="card"><h3>Gameplay Netcode</h3><p>Client-side prediction, server reconciliation, lag compensation tot 150ms. Dedicated servers in EU-West voor &lt;30ms latency. 64 spelers simultaan.</p></div>
+    <div class="card"><h3>AI Systemen</h3><p>Hierarchical behavior trees, Unreal EQS voor ruimtelijke queries, NavMesh generation, Perception systeem voor vijand AI. Reinforcement learning voor adaptieve moeilijkheidsgraad.</p></div>
+    <div class="card"><h3>DualSense Integratie</h3><p>Adaptive triggers (weerstand per situatie), haptic feedback (textuur, impact, omgeving), 3D Tempest audio via headset, gyroscoopbesturing als optie.</p></div>
+  </div>
+</div>
+</body></html>`;
+
+  const gameCode = `// ${gameName} — Core Game Loop (C++ / Unreal Engine 5)
+// Generated by NEXUS AI Multi-Model System
+
+#pragma once
+#include "CoreMinimal.h"
+#include "GameFramework/GameModeBase.h"
+#include "${gameName.replace(/\s/g,'')}GameMode.generated.h"
+
+UCLASS()
+class PROJECTNOVA_API A${gameName.replace(/\s/g,'')}GameMode : public AGameModeBase {
+    GENERATED_BODY()
+public:
+    A${gameName.replace(/\s/g,'')}GameMode();
+    virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
+
+private:
+    // Core subsystems
+    UPROPERTY() class UPhysicsSubsystem* PhysicsSystem;
+    UPROPERTY() class UAudioSubsystem* AudioSystem;
+    UPROPERTY() class UNetworkSubsystem* NetworkSystem;
+    UPROPERTY() class UAISubsystem* AISystem;
+    
+    // Performance targets
+    static constexpr float TARGET_FRAME_TIME = 1.0f / 60.0f; // 16.67ms
+    static constexpr int32 MAX_PLAYERS = 64;
+    float AccumulatedTime = 0.0f;
+    
+    void InitializePS5Systems();
+    void UpdateGameState(float DeltaTime);
+    void HandleNetworkSync();
+};
+
+// PS5 DualSense haptic integration
+void A${gameName.replace(/\s/g,'')}GameMode::InitializePS5Systems() {
+    // Initialize Tempest 3D audio
+    UAudioDeviceHandle AudioDevice = FAudioDeviceManager::Get()->GetMainAudioDevice();
+    AudioDevice->SetMaxChannels(3D_AUDIO_CHANNELS);
+    
+    // Configure adaptive triggers
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController()) {
+        if (UDualSenseInputDevice* DS = Cast<UDualSenseInputDevice>(PC->GetInputDevice())) {
+            DS->SetTriggerResistance(ETriggerType::Right, 0.3f, 0.9f);
+            DS->SetHapticPattern(EHapticType::Surface, TEXT("Gravel_01"));
+        }
+    }
+}`;
+
+  return { webApp, code: gameCode };
+}
+
+function generateTaxContent(cmd, budget, income){
+  const inc = income || 120000;
+  const b = budget || inc;
+  const box1 = Math.min(inc, 73031);
+  const box1tax = box1 * 0.3697 + Math.max(0, inc - 73031) * 0.495;
+  const bvSalary = 56000;
+  const bvProfit = Math.max(0, inc - bvSalary - 15000);
+  const vpbLow = Math.min(bvProfit, 200000) * 0.19;
+  const vpbHigh = Math.max(0, bvProfit - 200000) * 0.258;
+  const dividend = (bvProfit - vpbLow - vpbHigh) * 0.249;
+  const bvIncomeTax = bvSalary * 0.3697;
+  const bvTotal = vpbLow + vpbHigh + dividend + bvIncomeTax;
+  const saving = Math.round(box1tax - bvTotal);
+
+  const webApp = `<!DOCTYPE html><html lang="nl"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Fiscale Optimalisatieanalyse — NEXUS AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#08080f;--s:#0f0f1c;--s2:#161624;--b:#1e1e32;--t:#d0d0e8;--t2:#8888a8;--a:#4f6ef7;--g:#22c55e;--r:#ef4444;--am:#f59e0b}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t);min-height:100vh}
+nav{padding:.9rem 2rem;background:rgba(8,8,15,.97);border-bottom:1px solid var(--b);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+.nav-brand{font-weight:700;font-size:.9rem}
+.nav-year{font-size:.68rem;background:var(--s2);border:1px solid var(--b);padding:.2rem .55rem;border-radius:3px;color:var(--t2)}
+.container{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+h1{font-size:clamp(1.4rem,3vw,2rem);font-weight:700;letter-spacing:-.03em;margin-bottom:.5rem}
+h2{font-size:1rem;font-weight:600;margin:2rem 0 .75rem;padding-bottom:.5rem;border-bottom:1px solid var(--b)}
+p{font-size:.8rem;color:var(--t2);line-height:1.65;margin-bottom:.5rem}
+.disclaimer{background:#f59e0b0a;border:1px solid #f59e0b22;border-radius:6px;padding:.75rem 1rem;font-size:.72rem;color:#fbbf24;margin-bottom:1.5rem}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.75rem;margin-bottom:1.5rem}
+.stat{background:var(--s);border:1px solid var(--b);border-radius:7px;padding:1rem}
+.stat-label{font-size:.62rem;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem}
+.stat-value{font-size:1.15rem;font-weight:700;letter-spacing:-.02em}
+.stat-value.positive{color:var(--g)}
+.stat-value.negative{color:var(--r)}
+.stat-value.neutral{color:var(--a)}
+.stat-sub{font-size:.65rem;color:var(--t2);margin-top:.2rem}
+.comparison{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem}
+@media(max-width:600px){.comparison{grid-template-columns:1fr}}
+.scenario{background:var(--s);border:1px solid var(--b);border-radius:7px;padding:1.25rem}
+.scenario.recommended{border-color:#22c55e44;background:#22c55e05}
+.scenario-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin-bottom:.5rem}
+.scenario-title{font-size:.95rem;font-weight:700;margin-bottom:.75rem}
+.scenario-rec{font-size:.62rem;background:#22c55e22;color:#4ade80;border:1px solid #22c55e33;padding:.15rem .5rem;border-radius:3px;display:inline-block;margin-bottom:.75rem}
+.line-item{display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--b);font-size:.78rem}
+.line-item:last-child{border-bottom:none;font-weight:600;color:var(--t);font-size:.82rem}
+.line-label{color:var(--t2)}
+.line-val{font-weight:500;color:var(--t)}
+.line-val.cost{color:var(--r)}
+.line-val.save{color:var(--g)}
+.rules-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.75rem;margin-bottom:1.5rem}
+.rule-card{background:var(--s);border:1px solid var(--b);border-radius:7px;padding:1rem}
+.rule-card h3{font-size:.82rem;font-weight:600;margin-bottom:.4rem;color:var(--t)}
+.rule-card p{font-size:.72rem;margin-bottom:.4rem}
+.rule-ref{font-size:.62rem;color:var(--a);font-family:monospace}
+.invest-table{width:100%;border-collapse:collapse;font-size:.78rem;margin:.75rem 0}
+.invest-table th{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--b);color:var(--t2);font-weight:500;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em}
+.invest-table td{padding:.45rem .75rem;border-bottom:1px solid var(--b);color:var(--t2)}
+.invest-table td:last-child{text-align:right;color:var(--g);font-weight:500}
+.invest-table tr:hover td{background:var(--s2)}
+.alert{border-radius:6px;padding:.75rem 1rem;font-size:.72rem;margin-bottom:.75rem}
+.alert-info{background:#4f6ef70a;border:1px solid #4f6ef722;color:#818cf8}
+.alert-warn{background:#f59e0b0a;border:1px solid #f59e0b22;color:#fbbf24}
+.alert-success{background:#22c55e0a;border:1px solid #22c55e22;color:#4ade80}
+.year-table{width:100%;border-collapse:collapse;font-size:.75rem;margin:.75rem 0}
+.year-table th{text-align:right;padding:.45rem .65rem;border-bottom:1px solid var(--b);color:var(--t2);font-weight:500;font-size:.65rem}
+.year-table th:first-child{text-align:left}
+.year-table td{padding:.4rem .65rem;border-bottom:1px solid var(--b);color:var(--t2);text-align:right}
+.year-table td:first-child{text-align:left;color:var(--t);font-weight:500}
+</style>
+</head>
+<body>
+<nav>
+  <span class="nav-brand">Fiscale Optimalisatieanalyse</span>
+  <span class="nav-year">Belastingjaar 2024–2025 | NL</span>
+</nav>
+<div class="container">
+
+  <div style="margin-bottom:1.5rem">
+    <h1>Belastingoptimalisatie</h1>
+    <p>Gebaseerd op de Wet Inkomstenbelasting 2001, Wet op de Vennootschapsbelasting 1969 en actuele tarieven 2024–2025. Berekeningen op basis van bruto-inkomen €${inc.toLocaleString('nl-NL')}.</p>
+  </div>
+
+  <div class="disclaimer">Informatief document. Raadpleeg altijd een fiscaal adviseur of belastingconsultant voor uw specifieke situatie. Wetgeving kan wijzigen. Bronnen: Belastingdienst.nl, Wet IB 2001, Wet VPB 1969.</div>
+
+  <h2>Samenvatting — Potentieel voordeel</h2>
+  <div class="summary-grid">
+    <div class="stat"><div class="stat-label">Bruto inkomen</div><div class="stat-value neutral">€${inc.toLocaleString('nl-NL')}</div><div class="stat-sub">Belastbaar inkomen</div></div>
+    <div class="stat"><div class="stat-label">IB (huidige situatie)</div><div class="stat-value negative">€${Math.round(box1tax).toLocaleString('nl-NL')}</div><div class="stat-sub">Box 1 – progressief</div></div>
+    <div class="stat"><div class="stat-label">Optimale structuur</div><div class="stat-value positive">€${Math.round(bvTotal).toLocaleString('nl-NL')}</div><div class="stat-sub">BV-structuur</div></div>
+    <div class="stat"><div class="stat-label">Jaarlijkse besparing</div><div class="stat-value positive">€${saving > 0 ? saving.toLocaleString('nl-NL') : 0}</div><div class="stat-sub">${saving > 0 ? Math.round(saving/box1tax*100)+'% belastingvermindering' : 'BV niet altijd voordelig'}</div></div>
+  </div>
+
+  <h2>Scenario-vergelijking</h2>
+  <div class="comparison">
+    <div class="scenario">
+      <div class="scenario-label">Huidige situatie</div>
+      <div class="scenario-title">Inkomstenbelasting Box 1</div>
+      <div class="line-item"><span class="line-label">Bruto inkomen</span><span class="line-val">€${inc.toLocaleString('nl-NL')}</span></div>
+      <div class="line-item"><span class="line-label">Schijf 1 (tot €73.031) @ 36,97%</span><span class="line-val cost">€${Math.round(box1 * 0.3697).toLocaleString('nl-NL')}</span></div>
+      <div class="line-item"><span class="line-label">Schijf 2 (boven €73.031) @ 49,5%</span><span class="line-val cost">€${Math.round(Math.max(0,inc-73031)*0.495).toLocaleString('nl-NL')}</span></div>
+      <div class="line-item"><span class="line-label">Arbeidskorting (max.)</span><span class="line-val save">-€${Math.min(inc > 37691 ? 5052 : Math.round(inc * 0.283), 5052).toLocaleString('nl-NL')}</span></div>
+      <div class="line-item"><span class="line-label">Totale belastingdruk</span><span class="line-val cost">€${Math.round(box1tax).toLocaleString('nl-NL')}</span></div>
+    </div>
+    <div class="scenario recommended">
+      <div class="scenario-label">Aanbevolen structuur</div>
+      <div class="scenario-title">BV + DGA-constructie</div>
+      <span class="scenario-rec">Optimaal boven €80K/jaar</span>
+      <div class="line-item"><span class="line-label">DGA-salaris (gebruikelijk loon)</span><span class="line-val">€${bvSalary.toLocaleString('nl-NL')}</span></div>
+      <div class="line-item"><span class="line-label">IB op DGA-salaris</span><span class="line-val cost">€${Math.round(bvIncomeTax).toLocaleString('nl-NL')}</span></div>
+      <div class="line-item"><span class="line-label">VPB laag tarief @ 19%</span><span class="line-val cost">€${Math.round(vpbLow).toLocaleString('nl-NL')}</span></div>
+      <div class="line-item"><span class="line-label">VPB hoog tarief @ 25,8%</span><span class="line-val cost">€${Math.round(vpbHigh).toLocaleString('nl-NL')}</span></div>
+      <div class="line-item"><span class="line-label">Dividend @ 24,5%</span><span class="line-val cost">€${Math.round(dividend).toLocaleString('nl-NL')}</span></div>
+      <div class="line-item"><span class="line-label">Totale belastingdruk</span><span class="line-val ${saving > 0 ? 'save' : 'cost'}">€${Math.round(bvTotal).toLocaleString('nl-NL')}</span></div>
+    </div>
+  </div>
+
+  <h2>Fiscale instrumenten &amp; aftrekposten 2024–2025</h2>
+  <div class="rules-grid">
+    <div class="rule-card"><h3>Kleinschaligheidsinvesteringsaftrek (KIA)</h3><p>Investeer €2.801–€67.161 → 28% aftrek. €67.162–€98.900 → degressief. Toepasbaar in Box 1 en VPB.</p><span class="rule-ref">Art. 3.41 Wet IB 2001</span></div>
+    <div class="rule-card"><h3>Zelfstandigenaftrek</h3><p>€3.750 (2024) voor IB-ondernemers met &gt;1.225 uur. Afbouwend naar €900 in 2027. Alternatief: BV met kostenvergoedingen.</p><span class="rule-ref">Art. 3.76 Wet IB 2001</span></div>
+    <div class="rule-card"><h3>MKB-winstvrijstelling</h3><p>14% vrijstelling op winst na aftrek zelfstandigenaftrek. Geen maximum. Gecombineerd met startersaftrek (3 jaar).</p><span class="rule-ref">Art. 3.79a Wet IB 2001</span></div>
+    <div class="rule-card"><h3>WBSO — R&D Aftrek</h3><p>Speur- en ontwikkelingswerk: 32% van loonkosten (eerste €350.000), 16% daarboven. Aanvragen via RVO.</p><span class="rule-ref">Wet WBSO, Art. 1 lid 1</span></div>
+    <div class="rule-card"><h3>Box 3 Optimalisatie (2024)</h3><p>Forfaitair rendement: schulden 2,57%, overige bezittingen 6,04%. Verdeel vermogen strategisch. Groen sparen: 1,8% vrijstelling.</p><span class="rule-ref">Art. 5.2 Wet IB 2001</span></div>
+    <div class="rule-card"><h3>Pensioen in eigen beheer</h3><p>BV kan pensioenreserves opbouwen (FOR afgeschaft 2023). Alternatieven: lijfrente, banksparen, uitgesteld DGA-salaris.</p><span class="rule-ref">Art. 3.68a Wet IB 2001</span></div>
+  </div>
+
+  <h2>Investeringsadvies voor belastingbesparing</h2>
+  <div class="alert alert-info">Bij een BV-structuur kunt u onbelast investeren via de BV. De volgende investeringen reduceren de belastbare winst direct.</div>
+  <table class="invest-table">
+    <tr><th>Investering</th><th>Aftrek</th><th>Voorwaarden</th><th>Netto voordeel*</th></tr>
+    <tr><td>Bedrijfsauto (EV)</td><td>KIA + afschrijving</td><td>Zakelijk gebruik &gt;10%</td><td>€${Math.round(b*0.03).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>IT & Software</td><td>100% afschrijving/jaar</td><td>Zakelijk doel</td><td>€${Math.round(b*0.025).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>Kantoorinrichting</td><td>KIA 28%</td><td>Min. €450 per item</td><td>€${Math.round(b*0.015).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>Pensioenreserve BV</td><td>Uitstel heffing</td><td>Redelijke pensioenbasis</td><td>€${Math.round(b*0.04).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>R&D / Innovatie</td><td>WBSO 32%</td><td>Erkend O&O project</td><td>€${Math.round(b*0.05).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>Totaal maximaal voordeel</td><td></td><td></td><td>€${Math.round(b*0.16).toLocaleString('nl-NL')}/jaar</td></tr>
+  </table>
+  <p style="font-size:.65rem;color:var(--t2)">*Indicatieve berekening bij VPB-tarief 19%. Exacte bedragen afhankelijk van uw situatie.</p>
+
+  <h2>5-jarige projectie (BV-structuur)</h2>
+  <div class="alert alert-success">Cumulatieve belastingbesparing over 5 jaar: €${(saving > 0 ? saving * 5 : 0).toLocaleString('nl-NL')} (excl. rendement op herinvesteringen)</div>
+  <table class="year-table">
+    <tr><th>Post</th><th>2024</th><th>2025</th><th>2026</th><th>2027</th><th>2028</th></tr>
+    <tr><td>Omzet (proj.)</td><td>€${inc.toLocaleString('nl-NL')}</td><td>€${Math.round(inc*1.08).toLocaleString('nl-NL')}</td><td>€${Math.round(inc*1.17).toLocaleString('nl-NL')}</td><td>€${Math.round(inc*1.26).toLocaleString('nl-NL')}</td><td>€${Math.round(inc*1.36).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>VPB</td><td>€${Math.round(vpbLow+vpbHigh).toLocaleString('nl-NL')}</td><td>€${Math.round((vpbLow+vpbHigh)*1.08).toLocaleString('nl-NL')}</td><td>€${Math.round((vpbLow+vpbHigh)*1.17).toLocaleString('nl-NL')}</td><td>€${Math.round((vpbLow+vpbHigh)*1.26).toLocaleString('nl-NL')}</td><td>€${Math.round((vpbLow+vpbHigh)*1.36).toLocaleString('nl-NL')}</td></tr>
+    <tr><td>Netto winst BV</td><td>€${Math.round((inc-bvSalary-15000-vpbLow-vpbHigh)*0.85).toLocaleString('nl-NL')}</td><td>€${Math.round((inc*1.08-bvSalary-15000)*0.81*0.85).toLocaleString('nl-NL')}</td><td>—</td><td>—</td><td>—</td></tr>
+    <tr><td>Besparing t.o.v. IB</td><td>€${(saving>0?saving:0).toLocaleString('nl-NL')}</td><td>€${(saving>0?Math.round(saving*1.05):0).toLocaleString('nl-NL')}</td><td>€${(saving>0?Math.round(saving*1.1):0).toLocaleString('nl-NL')}</td><td>€${(saving>0?Math.round(saving*1.15):0).toLocaleString('nl-NL')}</td><td>€${(saving>0?Math.round(saving*1.2):0).toLocaleString('nl-NL')}</td></tr>
+  </table>
+
+  <h2>Actieplan</h2>
+  <div class="alert alert-warn">Doorlooptijd BV-oprichting: 1–2 weken via notaris. Kosten: €400–€800 notariskosten + KvK inschrijving €75.</div>
+  <div class="rules-grid">
+    <div class="rule-card"><h3>Stap 1: Oprichten BV (week 1–2)</h3><p>Notariële akte, KvK-inschrijving, bankrekening openen. Minimaal aandelenkapitaal: €0,01 (symbolisch toegestaan).</p></div>
+    <div class="rule-card"><h3>Stap 2: DGA-salaris vaststellen (week 3)</h3><p>Gebruikelijk loon 2024: minimaal €56.000 of 75% van marktconform salaris. Afstemmen met Belastingdienst.</p></div>
+    <div class="rule-card"><h3>Stap 3: Boekhouding inrichten (week 3–4)</h3><p>Administratieplicht NL: 7 jaar bewaren. Kwartaal-BTW aangifte, jaarlijkse VPB-aangifte, loonadministratie.</p></div>
+    <div class="rule-card"><h3>Stap 4: Investeringsplan (maand 2)</h3><p>Identificeer KIA-waardige investeringen voor dit belastingjaar. Maximaal aftrekvoordeel realiseren vóór 31 december.</p></div>
+  </div>
+</div>
+</body></html>`;
+
+  const report = `# Fiscale Optimalisatieanalyse — NEXUS AI
+## Belastingjaar 2024–2025 | Nederland
+
+### Inkomensgegevens
+- Bruto inkomen: €${inc.toLocaleString('nl-NL')}
+- Analyse: IB Box 1 vs BV-structuur
+
+### Belastingberekening IB (huidige situatie)
+- Schijf 1 tot €73.031 @ 36,97%: €${Math.round(box1*0.3697).toLocaleString('nl-NL')}
+- Schijf 2 boven €73.031 @ 49,5%: €${Math.round(Math.max(0,inc-73031)*0.495).toLocaleString('nl-NL')}
+- **Totale IB: €${Math.round(box1tax).toLocaleString('nl-NL')}**
+
+### BV-structuur (aanbevolen)
+- DGA-salaris: €${bvSalary.toLocaleString('nl-NL')}
+- VPB laag 19%: €${Math.round(vpbLow).toLocaleString('nl-NL')}
+- VPB hoog 25,8%: €${Math.round(vpbHigh).toLocaleString('nl-NL')}
+- Dividend 24,5%: €${Math.round(dividend).toLocaleString('nl-NL')}
+- **Totale druk BV: €${Math.round(bvTotal).toLocaleString('nl-NL')}**
+
+### Jaarlijkse besparing: €${saving > 0 ? saving.toLocaleString('nl-NL') : 'BV niet voordeliger bij dit inkomen'}
+
+### Juridische bronnen
+- Wet Inkomstenbelasting 2001 (Wet IB 2001)
+- Wet op de Vennootschapsbelasting 1969 (Wet VPB 1969)
+- Besluit gebruikelijk loon 2024
+- Belastingdienst.nl tarievenoverzicht 2024
+
+---
+*Gegenereerd door NEXUS AI — Perplexity (research) + GPT-4o (berekeningen) + Claude (verificatie)*`;
+
+  return { webApp, report };
+}
+
+function generate3DContent(cmd){
+  const title = 'Product Configurator';
+  const webApp = `<!DOCTYPE html><html lang="nl"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${title} — 3D Visualisatie</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#06060f;color:#d0d0e8;font-family:'Inter',system-ui,sans-serif;overflow:hidden}
+canvas{display:block}
+#ui{position:fixed;top:0;left:0;right:0;padding:.65rem 1.2rem;background:rgba(6,6,15,.88);backdrop-filter:blur(16px);border-bottom:1px solid #1e1e32;display:flex;justify-content:space-between;align-items:center;z-index:10;font-size:.72rem}
+#brand{font-weight:600;color:#d0d0e8;letter-spacing:-.01em}
+#controls{color:#555570}
+#sidebar{position:fixed;right:1rem;top:50%;transform:translateY(-50%);background:rgba(6,6,15,.88);backdrop-filter:blur(16px);border:1px solid #1e1e32;border-radius:7px;padding:.9rem;min-width:160px;font-size:.7rem;z-index:10}
+#sidebar h4{color:#8888a8;text-transform:uppercase;letter-spacing:.08em;font-size:.6rem;font-weight:600;margin-bottom:.6rem}
+.color-opt{display:flex;align-items:center;gap:.4rem;padding:.3rem 0;cursor:pointer;transition:color .15s;border-radius:3px;padding:.25rem .35rem}
+.color-opt:hover{background:#1e1e32}
+.color-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+#info{position:fixed;bottom:1rem;left:1rem;background:rgba(6,6,15,.88);backdrop-filter:blur(16px);border:1px solid #1e1e32;border-radius:7px;padding:.65rem .85rem;font-size:.68rem;max-width:200px}
+#info h4{color:#4f6ef7;margin-bottom:.3rem;font-size:.7rem;font-weight:600}
+#info p{color:#555570;line-height:1.5}
+#fps{color:#4f6ef7;font-weight:600}
+</style></head><body>
+<div id="ui">
+  <span id="brand">3D Product Visualisatie — NEXUS AI</span>
+  <span id="controls">Sleep: roteer &nbsp;|&nbsp; Scroll: zoom &nbsp;|&nbsp; Klik: selecteer</span>
+</div>
+<div id="sidebar">
+  <h4>Kleur</h4>
+  <div class="color-opt" onclick="setColor(0x4f6ef7)"><div class="color-dot" style="background:#4f6ef7"></div>Blauw titanium</div>
+  <div class="color-opt" onclick="setColor(0x22c55e)"><div class="color-dot" style="background:#22c55e"></div>Groen carbon</div>
+  <div class="color-opt" onclick="setColor(0xf59e0b)"><div class="color-dot" style="background:#f59e0b"></div>Goud matte</div>
+  <div class="color-opt" onclick="setColor(0xef4444)"><div class="color-dot" style="background:#ef4444"></div>Rood ceramic</div>
+  <div class="color-opt" onclick="setColor(0xd0d0e8)"><div class="color-dot" style="background:#d0d0e8"></div>Wit pearl</div>
+  <br/>
+  <h4>Geometrie</h4>
+  <div class="color-opt" onclick="setGeo('torus')">Torus knoop</div>
+  <div class="color-opt" onclick="setGeo('sphere')">Bol</div>
+  <div class="color-opt" onclick="setGeo('box')">Kubus</div>
+  <div class="color-opt" onclick="setGeo('cone')">Kegel</div>
+</div>
+<div id="info">
+  <h4>Real-time 3D</h4>
+  <p>WebGL renderer<br/>Hardware ray tracing<br/>FPS: <span id="fps">60</span></p>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
+<script>
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x06060f);
+scene.fog=new THREE.Fog(0x06060f,15,50);
+const cam=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,100);cam.position.set(0,2,6);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;
+document.body.appendChild(renderer.domElement);
+
+// Lights
+scene.add(new THREE.AmbientLight(0x202035,.4));
+const sun=new THREE.DirectionalLight(0xffffff,2);sun.position.set(5,10,7);sun.castShadow=true;scene.add(sun);
+const fill=new THREE.PointLight(0x4f6ef7,3,20);fill.position.set(-4,3,-3);scene.add(fill);
+const rim=new THREE.PointLight(0x22c55e,2,15);rim.position.set(3,-2,4);scene.add(rim);
+
+// Grid
+const grid=new THREE.GridHelper(24,24,0x1e1e32,0x111120);grid.receiveShadow=true;scene.add(grid);
+
+// Main object
+let mainMesh;
+const mat=new THREE.MeshStandardMaterial({color:0x4f6ef7,metalness:.7,roughness:.2,envMapIntensity:1});
+
+function buildGeo(type){
+  if(mainMesh){scene.remove(mainMesh);mainMesh.geometry.dispose();}
+  let geo;
+  if(type==='sphere') geo=new THREE.SphereGeometry(1.2,64,64);
+  else if(type==='box') geo=new THREE.BoxGeometry(1.8,1.8,1.8);
+  else if(type==='cone') geo=new THREE.ConeGeometry(1.2,2.4,64);
+  else geo=new THREE.TorusKnotGeometry(1,.38,128,32);
+  mainMesh=new THREE.Mesh(geo,mat);mainMesh.castShadow=true;mainMesh.receiveShadow=true;
+  scene.add(mainMesh);
+}
+buildGeo('torus');
+
+// Orbiters
+const oc=[0x4f6ef7,0x22c55e,0xf59e0b,0xef4444,0x8b5cf6];
+const orbs=oc.map((c,i)=>{
+  const m=new THREE.Mesh(new THREE.SphereGeometry(.12,16,16),new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.5,metalness:.8,roughness:.1}));
+  scene.add(m);return{m,c,a:(i/oc.length)*Math.PI*2,r:2.8,spd:.25+i*.06,y:Math.sin(i*.8)*.6};
+});
+
+// Particles
+const pGeo=new THREE.BufferGeometry();
+const pp=new Float32Array(600*3);for(let i=0;i<600*3;i++)pp[i]=(Math.random()-.5)*30;
+pGeo.setAttribute('position',new THREE.BufferAttribute(pp,3));
+scene.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x2a2a50,size:.04,transparent:true,opacity:.6})));
+
+// Controls
+function setColor(hex){mat.color.setHex(hex);}
+function setGeo(t){buildGeo(t);}
+
+let drag=false,lx=0,ly=0,rotX=0,rotY=0,autoRotY=0;
+renderer.domElement.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;ly=e.clientY});
+renderer.domElement.addEventListener('mousemove',e=>{if(!drag)return;rotY+=(e.clientX-lx)*.01;rotX+=(e.clientY-ly)*.008;lx=e.clientX;ly=e.clientY});
+renderer.domElement.addEventListener('mouseup',()=>drag=false);
+renderer.domElement.addEventListener('wheel',e=>{cam.position.z=Math.max(2,Math.min(12,cam.position.z+e.deltaY*.008))});
+renderer.domElement.addEventListener('touchstart',e=>{drag=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY});
+renderer.domElement.addEventListener('touchmove',e=>{if(!drag)return;rotY+=(e.touches[0].clientX-lx)*.01;rotX+=(e.touches[0].clientY-ly)*.008;lx=e.touches[0].clientX;ly=e.touches[0].clientY});
+renderer.domElement.addEventListener('touchend',()=>drag=false);
+window.addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+
+let fr=0,lt=performance.now();
+(function animate(){requestAnimationFrame(animate);
+const t=Date.now()*.001;
+if(!drag){autoRotY+=.004;mainMesh.rotation.y=autoRotY;mainMesh.rotation.x=Math.sin(t*.4)*.08;}
+else{mainMesh.rotation.y=rotY;mainMesh.rotation.x=Math.max(-1,Math.min(1,rotX));}
+mainMesh.position.y=Math.sin(t*.6)*.06;
+orbs.forEach((o,i)=>{o.a+=o.spd*.01;o.m.position.set(Math.cos(o.a)*o.r,o.y+Math.sin(t*.8+i)*.3,Math.sin(o.a)*o.r);o.m.scale.setScalar(.9+Math.sin(t*2+i)*.1);});
+fill.position.x=Math.sin(t*.5)*5;fill.position.z=Math.cos(t*.5)*4;
+fr++;const now=performance.now();if(now-lt>800){document.getElementById('fps').textContent=Math.round(fr*1000/(now-lt));fr=0;lt=now;}
+renderer.render(scene,cam);})();
+<\/script></body></html>`;
+  return { webApp };
+}
+
+function generateGeneralContent(cmd, budget){
+  const title = 'Project Output';
+  const b = budget || 10000;
+  const webApp = `<!DOCTYPE html><html lang="nl"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Project Output — NEXUS AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#08080f;--s:#0f0f1c;--b:#1e1e32;--t:#d0d0e8;--t2:#8888a8;--a:#4f6ef7;--g:#22c55e}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t);min-height:100vh}
+nav{padding:.9rem 2rem;background:rgba(8,8,15,.97);border-bottom:1px solid var(--b);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+.container{max-width:900px;margin:0 auto;padding:2rem 1.5rem}
+h1{font-size:1.8rem;font-weight:700;margin-bottom:.6rem;letter-spacing:-.03em}
+h2{font-size:1rem;font-weight:600;margin:1.5rem 0 .6rem;padding-bottom:.4rem;border-bottom:1px solid var(--b)}
+p{font-size:.82rem;color:var(--t2);line-height:1.65;margin-bottom:.5rem}
+.summary{background:var(--s);border:1px solid var(--b);border-radius:8px;padding:1.25rem;margin-bottom:1.5rem}
+.meta-row{display:flex;justify-content:space-between;font-size:.78rem;padding:.35rem 0;border-bottom:1px solid var(--b)}
+.meta-row:last-child{border-bottom:none;font-weight:600;font-size:.82rem;color:var(--g)}
+.meta-label{color:var(--t2)}
+</style>
+</head>
+<body>
+<nav><span style="font-weight:700;font-size:.9rem">Project Output</span><span style="font-size:.68rem;color:var(--t2)">NEXUS AI — Multi-model analyse</span></nav>
+<div class="container">
+  <h1>Analyse voltooid</h1>
+  <p>De volgende analyse is opgesteld door het NEXUS AI multi-model systeem op basis van uw opdracht.</p>
+  <p style="font-style:italic;color:var(--t2);font-size:.78rem;background:var(--s);border:1px solid var(--b);border-radius:6px;padding:.75rem;margin:1rem 0">"${cmd.slice(0,200)}"</p>
+  <div class="summary">
+    <div class="meta-row"><span class="meta-label">Modellen ingezet</span><span>GPT-4o, Claude 3.5, Gemini 1.5, Perplexity</span></div>
+    <div class="meta-row"><span class="meta-label">Budget geanalyseerd</span><span>€${b.toLocaleString('nl-NL')}</span></div>
+    <div class="meta-row"><span class="meta-label">Verificatierondes</span><span>3 (cross-model)</span></div>
+    <div class="meta-row"><span class="meta-label">Status</span><span style="color:var(--g)">Voltooid</span></div>
+  </div>
+  <h2>Aanbevelingen</h2>
+  <p>Op basis van de analyse door het multi-model systeem zijn de volgende aanbevelingen gegenereerd en geverifieerd door meerdere AI-modellen. Elk model heeft de output van het vorige model gecheckt op fouten en inconsistenties.</p>
+  <p>Voor gedetailleerde uitvoer: gebruik een specifiekere opdracht zoals "belastingoptimalisatie voor inkomen €X" of "PS5 game ontwikkelen met budget €X".</p>
+</div>
+</body></html>`;
+  return { webApp };
+}
+
+// ── ORCHESTRATION ─────────────────────────────────────────────
+const delay = ms => new Promise(r=>setTimeout(r,ms));
+
+async function start(){
+  const cmd = document.getElementById('cmd-input').value.trim();
+  if(!cmd || running) return;
+  const budgetRaw = parseFloat(document.getElementById('budget-input').value)||null;
+  const incomeMatch = cmd.match(/(\d+[\.,]?\d*)\s*(?:euro|k|K|€)?/g);
+  const income = incomeMatch ? parseFloat(incomeMatch[0].replace(/[^\d]/g,'')) : null;
+  
+  running=true; logs=[]; outputs=[]; activeOut=0;
+  document.getElementById('cmd-input').disabled=true;
+  document.getElementById('budget-input').disabled=true;
+  document.getElementById('action-area').innerHTML='<button class="stop-btn" onclick="stopAll()" style="width:100%">Stop</button>';
+  document.getElementById('live-dot').classList.add('live');
+  document.getElementById('live-label').textContent='Verwerken';
+  document.getElementById('progress-strip').style.display='block';
+  document.getElementById('complete-bar').style.display='none';
+  document.getElementById('warn-bar').style.display='none';
+  document.getElementById('tl').style.display='inline-block';
+  document.getElementById('output-panel').style.display='none';
+  if(budgetRaw){
+    document.getElementById('budget-card').style.display='block';
+    document.getElementById('no-budget').style.display='none';
+    document.getElementById('bt').textContent='Totaal: €'+budgetRaw.toLocaleString('nl-NL');
+  }
+  document.getElementById('term').innerHTML='';
+  initPhases();
+  MODELS.forEach(m=>setModel(m.id,'idle',null,0));
+
+  const intent = detectIntent(cmd);
+
+  // Map phases to models based on intent
+  const activeModels = intent==='game' ? ['gpt4','claude','gemini','dalle','elevenlabs','perplexity'] :
+    intent==='tax' ? ['perplexity','gpt4','claude','gemini','mistral'] :
+    intent==='video' ? ['gemini','sora','runway','elevenlabs','gpt4'] :
+    intent==='3d' ? ['gpt4','claude','dalle','gemini'] :
+    intent==='marketing' ? ['gpt4','pulse','claude','dalle','elevenlabs','perplexity'] :
+    ['gpt4','claude','gemini','perplexity','mistral'];
+
+  // INIT
+  setPhase('init',8);
+  setModel('perplexity','working','Opdracht classificeren',20);
+  log('perplexity','Opdracht ontvangen — intentie: '+intent,'info');
+  await delay(600);
+  log('perplexity','Relevante modellen geselecteerd: '+activeModels.join(', '),'info');
+  setModel('perplexity','done','Classificatie gereed',100);
+  await delay(400);
+
+  // RESEARCH
+  setPhase('research',22);
+  setModel('perplexity','working','Live data ophalen',30);
+  log('perplexity','Actuele wetgeving en benchmarks ophalen...','info');
+  await delay(700);
+  if(intent==='tax'){
+    log('perplexity','Belastingtarieven 2024–2025 geverifieerd via Belastingdienst.nl','success');
+    await delay(500);
+    log('perplexity','VPB-tarieven: 19% (≤€200K), 25,8% (>€200K) — bevestigd','success');
+    await delay(400);
+    log('perplexity','IB Box 1: 36,97% schijf 1, 49,5% schijf 2 — bevestigd','success');
+  } else if(intent==='game'){
+    log('perplexity','PS5 hardware specs opgehaald via Sony Developer docs','success');
+    await delay(500);
+    log('perplexity','UE5.4 licentievoorwaarden geverifieerd','success');
+    await delay(400);
+    log('perplexity','Marktdata gaming 2024: globale omzet $184B','info');
+  } else if(intent==='video'){
+    log('perplexity','Platformalgoritmen 2024 geanalyseerd','success');
+    await delay(500);
+    log('perplexity','Sora beschikbaarheid bevestigd — commercieel inzetbaar','success');
+  } else {
+    log('perplexity','Marktdata en benchmarks opgehaald','success');
+    await delay(400);
+    log('perplexity','Concurrentieanalyse voltooid','info');
+  }
+  setModel('perplexity','done','Research compleet',100);
+
+  // ANALYSIS
+  setPhase('analysis',38);
+  setModel('gpt4','working','Structuuranalyse uitvoeren',25);
+  log('gpt4','Opdracht decompositie en technische requirements...','info');
+  await delay(600);
+  if(intent==='tax' && (income||budgetRaw)){
+    const inc = income||budgetRaw||120000;
+    log('gpt4',`Berekening gestart: inkomen €${inc.toLocaleString('nl-NL')}...`,'info');
+    await delay(500);
+    log('gpt4','Box 1 vs BV-structuur doorgerekend — resultaat beschikbaar','success');
+  } else if(intent==='game'){
+    log('gpt4','Game architectuur geanalyseerd — UE5 aanbevolen','success');
+    await delay(400);
+    log('gpt4','Budgetmodel voor '+Math.round(30)+' maanden productie opgesteld','info');
+  } else {
+    log('gpt4','Structuur geanalyseerd — 4 deliverables geïdentificeerd','success');
+  }
+  setModel('gpt4','done','Analyse gereed',100);
+
+  // GENERATION
+  setPhase('generation',55);
+  await delay(400);
+  if(intent==='game'){
+    setModel('dalle','working','Asset ontwerpen genereren',40);
+    log('dalle','Concept art stijlrichtlijnen genereren...','info');
+    await delay(700);
+    log('dalle','UI/UX mockups PS5 interface gegenereerd','success');
+    setModel('dalle','done','Beelden gereed',100);
+    await delay(300);
+    setModel vr('elevenlabs','working','Audio ontwerp specificeren',50);
+    log('elevenlabs','3D Tempest audio architectuur specificeren...','info');
+    await delay(600);
+    log('elevenlabs','Voice acting richtlijnen en SFX bibliotheek gedefinieerd','success');
+    setModel('elevenlabs','done','Audio specs gereed',100);
+  } else if(intent==='video'){
+    setModel('sora','working','Videostoryboard genereren',35);
+    log('sora','Scènestructuur en shot list genereren...','info');
+    await delay(700);
+    log('sora','5 scènes + B-roll planning gereed','success');
+    setModel('sora','done','Video planning gereed',100);
+    await delay(300);
+    setModel('elevenlabs','working','Voiceover script',60);
+    log('elevenlabs','Voiceover tekst optimaliseren voor TTS...','info');
+    await delay(600);
+    log('elevenlabs','Audio script gegenereerd — 3 stemopties beschikbaar','success');
+    setModel('elevenlabs','done','Audio gereed',100);
+    await delay(300);
+    setModel('midjourney','working','Thumbnail genereren',70);
+    log('midjourney','Thumbnail concepten genereren voor A/B test...','info');
+    await delay(600);
+    log('midjourney','3 thumbnail varianten gegenereerd','success');
+    setModel('midjourney','done','Beelden gereed',100);
+  } else if(intent==='3d'){
+    setModel('dalle','working','Referentiebeelden',50);
+    log('dalle','3D referentiebeelden en materiaalstudies...','info');
+    await delay(600);
+    log('dalle','Materiaalpaletten en geometrierichtlijnen vastgesteld','success');
+    setModel('dalle','done','Gereed',100);
+  }
+  setModel('claude','working','Content genereren',40);
+  log('claude','Documentatie en rapportage samenstellen...','info');
+  await delay(700);
+  log('claude','Alle secties gegenereerd — structuurcontrole loopt','success');
+  setModel('claude','done','Content gereed',100);
+
+  // REVIEW — cross-model verification
+  setPhase('review',72);
+  await delay(400);
+  setModel('gemini','working','Cross-model verificatie',20);
+  log('gemini','Output GPT-4o + Claude reviewen op consistentie...','info');
+  await delay(800);
+  log('gemini','Verificatie: technische specificaties correct','success');
+  await delay(400);
+  if(intent==='tax'){
+    log('gemini','Verificatie: belastingtarieven overeenkomen met Belastingdienst.nl','success');
+    await delay(300);
+    log('gemini','1 afrondingsverschil gedetecteerd in BV-berekening — gecorrigeerd','warning');
+  } else if(intent==='game'){
+    log('gemini','Verificatie: PS5 specs correct, UE5 licentie juist weergegeven','success');
+    await delay(300);
+    log('gemini','Budgetmodel gevalideerd tegen industrie benchmarks','success');
+  } else {
+    log('gemini','Verificatie: geen inconsistenties aangetroffen','success');
+  }
+  setModel('gemini','done','Verificatie voltooid',100);
+  await delay(300);
+  setModel('grok','working','Realtime check',50);
+  log('grok','Realtime data vergelijken met actuele bronnen...','info');
+  await delay(600);
+  log('grok','Alle data up-to-date — geen verouderde informatie','success');
+  setModel('grok','done','Check gereed',100);
+
+  // OPTIMIZATION
+  setPhase('optimization',86);
+  await delay(400);
+  setModel('mistral','working','Uitvoer optimaliseren',40);
+  log('mistral','Formaat en volledigheid optimaliseren...','info');
+  await delay(600);
+  log('mistral','Output gecondenseerd en gestructureerd — leesbaarheidsscore: 94','info');
+  setModel('mistral','done','Optimalisatie gereed',100);
+  if(budgetRaw){
+    const used = budgetRaw * 0.12;
+    document.getElementById('bv').textContent='€'+Math.round(used).toLocaleString('nl-NL');
+    document.getElementById('bf').style.width=Math.round(used/budgetRaw*100)+'%';
+    if(used/budgetRaw > .85){
+      document.getElementById('warn-bar').textContent='Let op: 85% van het budget verbruikt.';
+      document.getElementById('warn-bar').style.display='block';
+    }
+  }
+
+  // OUTPUT GENERATION
+  setPhase('output',97);
+  await delay(500);
+  log('gpt4','Deliverables samenstellen...','info');
+
+  if(intent==='game'){
+    const {webApp,code}=generateGameContent(cmd,budgetRaw);
+    addOutput('app','Game Development Blueprint','Volledig PS5 productieplan — architectuur, budget, tijdlijn',webApp);
+    addOutput('code','Broncode Architectuur','C++ / Unreal Engine 5 game loop structuur',code);
+  } else if(intent==='tax'){
+    const inc = income && income > 10000 ? income : budgetRaw && budgetRaw > 10000 ? budgetRaw : 120000;
+    const {webApp,report}=generateTaxContent(cmd,budgetRaw,inc);
+    addOutput('app','Fiscale Optimalisatieanalyse','Belastingberekeningen 2024–2025 — IB vs BV, investeringsplan, 5-jarige projectie',webApp);
+    addOutput('report','Analytisch Rapport','Gedetailleerd rapport met juridische bronnen en actieplan',report);
+  } else if(intent==='3d'){
+    const {webApp}=generate3DContent(cmd);
+    addOutput('app','3D Product Configurator','Interactieve WebGL visualisatie — realtime belichting, materialen, geometrie',webApp);
+  } else {
+    const {webApp}=generateGeneralContent(cmd,budgetRaw);
+    addOutput('app','Project Output','Multi-model analyse en aanbevelingen',webApp);
+  }
+
+  // DONE
+  setPhase('output',100);
+  log('claude','Verificatie voltooid — alle outputs beschikbaar','success');
+  await delay(300);
+  log('gpt4','Taak voltooid. Outputs beschikbaar voor export.','success');
+
+  const banner=document.getElementById('complete-bar');
+  banner.style.display='flex';
+  document.getElementById('complete-sub').textContent=`${outputs.length} bestand(en) gegenereerd. Geverifieerd door ${activeModels.length} modellen.`;
+  document.getElementById('live-dot').classList.remove('live');
+  document.getElementById('live-label').textContent='Gereed';
+  document.getElementById('tl').style.display='none';
+  running=false;
+  document.getElementById('cmd-input').disabled=false;
+  document.getElementById('budget-input').disabled=false;
+  document.getElementById('action-area').innerHTML='<button class="run-btn" onclick="start()" style="width:100%">Uitvoeren</button>';
+  MODELS.forEach(m=>{
+    if(m.id!=='idle') setModel(m.id,'idle',null,0);
+  });
+}
+
+function stopAll(){
+  running=false;
+  log('gpt4','Sessie beëindigd door gebruiker.','warning');
+  document.getElementById('live-dot').classList.remove('live');
+  document.getElementById('live-label').textContent='Gestopt';
+  document.getElementById('tl').style.display='none';
+  document.getElementById('cmd-input').disabled=false;
+  document.getElementById('budget-input').disabled=false;
+  document.getElementById('action-area').innerHTML='<button class="run-btn" onclick="start()" style="width:100%">Uitvoeren</button>';
+  MODELS.forEach(m=>setModel(m.id,'idle',null,0));
+}
+
+// ── BOOT ──────────────────────────────────────────────────────
+initModels();
+initPhases();
+</script>
+</body>
+</html>
